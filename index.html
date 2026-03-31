@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T.Nhan Truong — Portfolio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="intro-screen" id="intro">
+  <div class="intro-logo">T.Nhan Truong</div>
+  <div class="intro-sub">Portfolio</div>
+  <div class="press-start" id="pressStart">
+    <span class="press-start-text">— PRESS START —</span>
+  </div>
+</div>
+
+<div class="screen" id="mainScreen" style="display:none;">
+  <div class="title-area">
+    <div class="pixel-art-title">T.Nhan Truong</div>
+    <div class="subtitle">Portfolio</div>
+  </div>
+
+  <div class="frame" data-label="♦ MAIN MENU ♦">
+    <ul class="menu-list" id="menuList"></ul>
+
+    <div class="desc-box">
+      <div class="desc-text" id="descText"></div>
+    </div>
+  </div>
+
+  <div class="footer" id="footer">
+    <div class="controls">
+      <div class="key-hint"><span class="key">↑↓</span> Navigate</div>
+      <div class="key-hint"><span class="key">Enter</span> Select</div>
+    </div>
+  </div>
+</div>
+
+<button class="sound-btn" id="soundBtn">SFX: ON</button>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chat</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div id="landing" class="screen">
+  <div class="card">
+    <h1>Chat</h1>
+    <div class="sub">Create a room or join with a code.</div>
+
+    <div class="label">Your name</div>
+    <input id="name-input" class="field" placeholder="Enter a name" maxlength="14" autocomplete="off">
+
+    <div class="btn-row">
+      <button class="btn primary" id="btn-create">Create room</button>
+      <button class="btn" id="btn-join-show">Join room</button>
+    </div>
+
+    <div id="join-section" class="hidden" style="margin-top:16px">
+      <div class="label">Room code</div>
+      <input id="code-input" class="field code" placeholder="XXXX" maxlength="4" autocomplete="off">
+      <div class="btn-row"><button class="btn primary" id="btn-join">Connect</button></div>
+    </div>
+
+    <div id="landing-error" class="error"></div>
+  </div>
+</div>
+
+<div id="chat" class="screen hidden">
+  <div class="chat-main">
+    <div class="chat-header">
+      <div class="room-tag">
+        <span class="rl">Room</span>
+        <span class="code" id="room-code-display" title="Tap to copy">----</span>
+      </div>
+      <button class="btn" id="btn-leave">Leave</button>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="chat-input-bar">
+      <input id="msg-input" type="text" placeholder="Message" autocomplete="off" maxlength="500" disabled>
+      <button class="btn primary" id="btn-send">Send</button>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div class="sb-title">Online</div>
+    <div id="member-list"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="stars.js"></script>
+<script src="state.js"></script>
+<script src="network.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
