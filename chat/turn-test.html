@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TURN Test</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0f1117;color:#e6e6e6;margin:0;padding:20px;line-height:1.5}
+  h1{font-size:20px}
+  button{background:#3b82f6;color:#fff;border:0;border-radius:8px;padding:12px 18px;font-size:16px;cursor:pointer}
+  button:disabled{opacity:.5}
+  #log{margin-top:16px;background:#171a22;border-radius:8px;padding:12px;font-family:monospace;font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .ok{color:#4ade80}.bad{color:#f87171}.warn{color:#fbbf24}.dim{color:#9ca3af}
+  .verdict{font-size:17px;font-weight:700;margin-top:16px;padding:12px;border-radius:8px}
+  .verdict.pass{background:#052e16;color:#4ade80}
+  .verdict.fail{background:#450a0a;color:#f87171}
+</style>
+</head>
+<body>
+<h1>TURN / ICE Test</h1>
+<p class="dim">Testet die exakt in der Chat-App konfigurierten Server. Auf dem Gerät ausführen, das beim Joinen fehlschlägt (z. B. Handy im Mobilfunknetz).</p>
+<button id="run">Test starten</button>
+<div id="verdict"></div>
+<div id="log"></div>
+
+<script>
+// Muss identisch zu PEER_OPTS.config.iceServers in state.js sein.
+const ICE=[
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+];
+
+const logEl=document.getElementById('log');
+const verdictEl=document.getElementById('verdict');
+function log(msg,cls){const s=document.createElement('span');if(cls)s.className=cls;s.textContent=msg+'\n';logEl.appendChild(s);}
+
+document.getElementById('run').addEventListener('click',async()=>{
+  logEl.innerHTML='';verdictEl.innerHTML='';verdictEl.className='';
+  const btn=document.getElementById('run');btn.disabled=true;
+
+  const types={host:0,srflx:0,relay:0};
+  const pc=new RTCPeerConnection({iceServers:ICE});
+  pc.createDataChannel('t');
+
+  pc.onicecandidate=e=>{
+    if(!e.candidate){finish();return;}
+    const c=e.candidate.candidate;
+    const m=c.match(/ typ (\w+)/);
+    const type=m?m[1]:'?';
+    if(types[type]!==undefined)types[type]++;
+    let cls='dim';
+    if(type==='relay')cls='ok';
+    else if(type==='srflx')cls='warn';
+    log((type==='relay'?'✓ RELAY (TURN!)  ':'  '+type+'  ')+c,cls);
+  };
+  pc.onicegatheringstatechange=()=>{if(pc.iceGatheringState==='complete')finish();};
+
+  let done=false;
+  function finish(){
+    if(done)return;done=true;clearTimeout(to);
+    log('\n--- Ergebnis ---','dim');
+    log('host (lokal): '+types.host,'dim');
+    log('srflx (STUN):  '+types.srflx,'warn');
+    log('relay (TURN):  '+types.relay,types.relay>0?'ok':'bad');
+    if(types.relay>0){
+      verdictEl.className='verdict pass';
+      verdictEl.textContent='✓ TURN FUNKTIONIERT — Relay-Kandidat gefunden. Das Verbindungsproblem liegt woanders.';
+    }else if(types.srflx>0){
+      verdictEl.className='verdict fail';
+      verdictEl.textContent='✗ KEIN TURN-RELAY. STUN geht, aber TURN relayt nicht → über verschiedene Netze/Mobilfunk scheitert die Verbindung. TURN-Server muss ersetzt werden.';
+    }else{
+      verdictEl.className='verdict fail';
+      verdictEl.textContent='✗ WEDER STUN NOCH TURN. Kandidaten-Sammlung blockiert (Firewall?) oder alle Server nicht erreichbar.';
+    }
+    try{pc.close();}catch(_){}
+    btn.disabled=false;
+  }
+
+  const to=setTimeout(finish,15000);
+  try{
+    const o=await pc.createOffer();
+    await pc.setLocalDescription(o);
+    log('ICE-Sammlung gestartet…\n','dim');
+  }catch(e){log('Fehler: '+e.message,'bad');finish();}
+});
+</script>
+</body>
+</html>
