@@ -10,7 +10,7 @@ async function createRoom(){
     const code=genCode();
     const peerId=PJS_PREFIX+code;
     const result=await new Promise(resolve=>{
-      const p=new Peer(peerId,{debug:0});
+      const p=new Peer(peerId,PEER_OPTS);
       const t=setTimeout(()=>{try{p.destroy();}catch(e){}resolve({fatal:true});},10000);
       p.on('open',()=>{clearTimeout(t);resolve({ok:true,p,code});});
       p.on('error',e=>{
@@ -85,7 +85,7 @@ async function joinRoom(){
   document.getElementById('landing-error').innerHTML='<span class="spinner"></span>Connecting...';
   me.name=name;me.isHost=false;me.id=genClientId();room.code=code;
 
-  peer=new Peer(me.id,{debug:0});
+  peer=new Peer(me.id,PEER_OPTS);
   const opened=await new Promise(resolve=>{
     const t=setTimeout(()=>resolve(false),10000);
     peer.on('open',()=>{clearTimeout(t);resolve(true);});
@@ -93,22 +93,47 @@ async function joinRoom(){
   });
   if(!opened){document.getElementById('landing-error').textContent='';try{peer.destroy();}catch(_){}peer=null;return err('Could not connect to network');}
 
-  const conn=peer.connect(PJS_PREFIX+code,{reliable:true});
-  let ok=false;
-  const timeout=setTimeout(()=>{
-    if(!ok){document.getElementById('landing-error').textContent='';err('Room not found or host offline');try{conn.close();}catch(_){}try{peer.destroy();}catch(_){}peer=null;}
-  },8000);
-
-  conn.on('open',()=>{
-    ok=true;clearTimeout(timeout);hostConn=conn;
-    send(conn,{type:'JOIN',name:me.name});
+  let ok=false,triesLeft=2,curTimeout=null,failMsg='Could not reach host';
+  const giveUp=()=>{
+    if(ok)return;
     document.getElementById('landing-error').textContent='';
-    enterChat();
+    err(failMsg);
+    try{peer.destroy();}catch(_){}peer=null;
+  };
+  const retryOrFail=()=>{
+    if(ok||!peer)return;
+    clearTimeout(curTimeout);
+    if(triesLeft>0){triesLeft--;setTimeout(attempt,800);}
+    else{giveUp();}
+  };
+
+  // The public PeerJS broker occasionally reports the host as unavailable even
+  // when it is online, so retry the connection a few times before giving up.
+  function attempt(){
+    if(ok||!peer)return;
+    const conn=peer.connect(PJS_PREFIX+code,{reliable:true});
+    curTimeout=setTimeout(()=>{failMsg='Room not found or host offline';try{conn.close();}catch(_){}retryOrFail();},8000);
+
+    conn.on('open',()=>{
+      ok=true;clearTimeout(curTimeout);hostConn=conn;
+      send(conn,{type:'JOIN',name:me.name});
+      document.getElementById('landing-error').textContent='';
+      enterChat();
+    });
+    conn.on('data',d=>clientOnMessage(d));
+    conn.on('close',()=>{if(ok&&!leaving){renderMessage({kind:'system',text:'Disconnected from host',time:now()});setTimeout(leaveRoom,1200);}});
+    conn.on('error',()=>retryOrFail());
+  }
+
+  // peer-unavailable is emitted on the peer (not the connection); treat it as a
+  // failed attempt and retry. Other errors mean the broker itself is unreachable.
+  peer.on('error',e=>{
+    if(ok)return;
+    if(e&&e.type==='peer-unavailable')retryOrFail();
+    else giveUp();
   });
-  conn.on('data',d=>clientOnMessage(d));
-  conn.on('close',()=>{if(ok&&!leaving){renderMessage({kind:'system',text:'Disconnected from host',time:now()});setTimeout(leaveRoom,1200);}});
-  conn.on('error',()=>{});
-  peer.on('error',()=>{if(!ok){clearTimeout(timeout);document.getElementById('landing-error').textContent='';err('Could not reach host');try{peer.destroy();}catch(_){}peer=null;}});
+
+  attempt();
 }
 
 function clientOnMessage(m){
