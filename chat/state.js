@@ -1,17 +1,18 @@
 const PJS_PREFIX='hkcomms1-';
 const MAX_HISTORY=100;
 
-// ICE servers: STUN for direct connections + free TURN relay so devices on
-// different networks (e.g. mobile/cellular behind symmetric NAT) can still connect.
+// ICE servers: Google STUN + PeerJS's own free TURN relays (the defaults that
+// ship with peerjs 1.5.x). The TURN relays let devices on different networks
+// (e.g. mobile/cellular behind symmetric NAT) connect. Passing an explicit
+// config replaces PeerJS's defaults, so these must be listed here.
 const PEER_OPTS={
   debug:0,
   config:{
     iceServers:[
       {urls:'stun:stun.l.google.com:19302'},
-      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
-    ]
+      {urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'}
+    ],
+    sdpSemantics:'unified-plan'
   }
 };
 
